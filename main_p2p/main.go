@@ -1,23 +1,33 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"log"
 	mrand "math/rand"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/libp2p/go-libp2p"
+	"github.com/davecgh/go-spew/spew"
+	golog "github.com/ipfs/go-log"
+	libp2p "github.com/libp2p/go-libp2p"
 	crypto "github.com/libp2p/go-libp2p-crypto"
 	host "github.com/libp2p/go-libp2p-host"
+	net "github.com/libp2p/go-libp2p-net"
+	peer "github.com/libp2p/go-libp2p-peer"
+	pstore "github.com/libp2p/go-libp2p-peerstore"
 	ma "github.com/multiformats/go-multiaddr"
+	gologging "github.com/whyrusleeping/go-logging"
 )
 
 type Block struct {
@@ -76,7 +86,9 @@ func generateBlock(oldBlock Block, Payload string) Block {
 
 	return newBlock
 }
-
+//listenPort:other peers connect to
+//secio: turns on and off secure data streams
+//randSeed: supplu a seed to create a random address for our host
 func makeBasicHost(listenPort int, secio bool, randseed int64) (host.Host, error) {
 	var r io.Reader
 	if randseed == 0 {
@@ -116,7 +128,29 @@ func makeBasicHost(listenPort int, secio bool, randseed int64) (host.Host, error
 	if secio {
 		log.Printf("Now run \"go run main.go -l %d -d %s -secio\" on a different terminal\n", listenPort+1, fullAddr)
 	} else {
-		log.Printf("Now run \"go run main.go -l%s\" on a different terminal\n", listenPort+1, fullAddr)
+		log.Printf("Now run \"go run main.go -l %d -d %s\" on a different terminal\n", listenPort+1, fullAddr)
 	}
 	return basicHost, nil
+}
+
+func handleStream(s net.Stream) {
+	log.Println("Got a new stream!")
+
+	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
+
+
+	go readData(rw)
+	go writeData(rw)
+}
+
+func readData(rw *bufio.ReadWriter) {
+
+}
+
+func writeData(rw *bufio.ReadWriter) {
+
+}
+
+func main() {
+
 }
