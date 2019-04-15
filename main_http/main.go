@@ -1,4 +1,4 @@
-package main_http
+package main
 
 import (
 	"crypto/sha256"
@@ -144,13 +144,13 @@ func respondWithJSON(w http.ResponseWriter, r *http.Request, code int, payload i
 
 func main() {
 	err := godotenv.Load()
-	if err != nil{
+	if err != nil {
 		log.Fatal(err)
 	}
 
-	go func(){ //goroutine  匿名函数
-		t:= time.Now()
-		genesisBlock := Block{0,t.String(), 0, "", ""}
+	go func() { //goroutine  匿名函数
+		t := time.Now()
+		genesisBlock := Block{0, t.String(), 0, "", ""}
 		spew.Dump(genesisBlock)
 		Blockchain = append(Blockchain, genesisBlock) // object = json
 	}()

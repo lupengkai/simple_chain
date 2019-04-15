@@ -1,4 +1,4 @@
-package main_tcp
+package main
 
 import (
 	"bufio"
@@ -75,10 +75,7 @@ func replaceChain(newBlocks []Block) {
 
 }
 
-
 var bcServer chan []Block
-
-
 
 func main() {
 	err := godotenv.Load()
@@ -92,7 +89,6 @@ func main() {
 	genesisBlock := Block{0, t.String(), 0, "", ""}
 	spew.Dump(genesisBlock)
 	Blockchain = append(Blockchain, genesisBlock)
-
 
 	//TCP
 	server, err := net.Listen("tcp", ":"+os.Getenv("ADDR"))
@@ -121,7 +117,7 @@ func handleConn(conn net.Conn) {
 		for scanner.Scan() {
 			bpm, err := strconv.Atoi(scanner.Text())
 			if err != nil {
-				log.Printf("%v not a number: %v", scanner.Text(),err)
+				log.Printf("%v not a number: %v", scanner.Text(), err)
 				continue
 			}
 
@@ -138,15 +134,13 @@ func handleConn(conn net.Conn) {
 			bcServer <- Blockchain
 			io.WriteString(conn, "\nEnter a new BPM:")
 
-
-
 		}
 
 	}()
 
 	go func() {
 		for {
-			time.Sleep(10*time.Second)
+			time.Sleep(10 * time.Second)
 
 			output, err := json.Marshal(Blockchain)
 			if err != nil {
@@ -161,12 +155,5 @@ func handleConn(conn net.Conn) {
 		spew.Dump(Blockchain)
 	}
 
-
 	defer conn.Close()
 }
-
-
-
-
-
-
