@@ -70,7 +70,7 @@ func calculateHash(block Block) string {
 }
 
 // create a new block using previous block's hash
-func generateBlock(oldBlock Block, Payload string) Block {
+func generateBlock(oldBlock Block, payload string) Block {
 
 	var newBlock Block
 
@@ -78,7 +78,7 @@ func generateBlock(oldBlock Block, Payload string) Block {
 
 	newBlock.Index = oldBlock.Index + 1
 	newBlock.Timestamp = t.String()
-	newBlock.Payload = Payload
+	newBlock.Payload = payload
 	newBlock.PrevHash = oldBlock.Hash
 	newBlock.Nonce = "000"
 	newBlock.Difficulty = 1
@@ -144,10 +144,84 @@ func handleStream(s net.Stream) {
 }
 
 func readData(rw *bufio.ReadWriter) {
+	for {
+		str, err := rw.ReadString('\n')
+		if err != nil {
+			log.Fatal(err)
+		}
+		if str == "" {
+			return
+		}
+		if str != "\n" {
+			chain := make([]Block, 0)
+			if err:= json.Unmarshal([]byte(str), &chain); err != nil {
+				log.Fatal(err)
+			}
+			mutex.Lock()
+			if len(chain) > len(Blockchain) {
+				Blockchain = chain
+				bytes, err := json.MarshalIndent(Blockchain, "", " ")
+				if err != nil {
+					log.Fatal(err)
+				}
 
+				fmt.Printf("\x1b[32m%s\x1b[0m>", string(bytes))
+			}
+			mutex.Unlock()
+		}
+	}
 }
 
 func writeData(rw *bufio.ReadWriter) {
+	go func() {
+		for {
+			time.Sleep(5 * time.Second)
+			mutex.Lock()
+			bytes, err := json.Marshal(Blockchain)
+			if err != nil {
+				log.Fatal(err)
+			}
+			mutex.Unlock()
+
+			mutex.Lock()
+			rw.WriteString(fmt.Sprintf("%s\n", string(bytes)))
+			rw.Flush()
+			mutex.Unlock()
+		}
+	}()
+
+	stdReader := bufio.NewReader(os.Stdin)
+
+	for {
+		fmt.Print("> ")
+		sendData, err:= stdReader.ReadString('\n')
+		if err != nil {
+			log.Fatal(err)
+		}
+		sendData = strings.Replace(sendData, "\n", "", -1)
+		payload, err:=strconv.Atoi(sendData)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+
+		newBlock := generateBlock(Blockchain[len(Blockchain)-1],payload)
+		if isBlockValid(newBlock, Blockchain[len(Blockchain)-1]) {
+			mutex.Lock()
+			Blockchain = append(Blockchain, newBlock)
+			mutex.Unlock()
+		}
+
+		bytes, err := json.Marshal(Blockchain)
+		if err != nil {
+			log.Println(err)
+		}
+		spew.Dump(Blockchain)
+		mutex.Lock()
+		rw.WriteString(fmt.Sprintf("%s\n", string(bytes)))
+		rw.Flush()
+		mutex.Unlock()
+	}
 
 }
 
