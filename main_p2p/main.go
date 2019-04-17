@@ -1,5 +1,8 @@
 package main
 
+// build host, connect
+//handleStream, process write or read
+
 import (
 	"bufio"
 	"context"
@@ -9,6 +12,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/libp2p/go-libp2p"
 	"io"
 	"log"
 	mrand "math/rand"
@@ -20,7 +24,6 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	golog "github.com/ipfs/go-log"
-	libp2p "github.com/libp2p/go-libp2p"
 	crypto "github.com/libp2p/go-libp2p-crypto"
 	host "github.com/libp2p/go-libp2p-host"
 	net "github.com/libp2p/go-libp2p-net"
@@ -198,8 +201,7 @@ func writeData(rw *bufio.ReadWriter) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		sendData = strings.Replace(sendData, "\n", "", -1)
-		payload, err:=strconv.Atoi(sendData)
+		payload := strings.Replace(sendData, "\n", "", -1)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -225,6 +227,71 @@ func writeData(rw *bufio.ReadWriter) {
 
 }
 
-func main() {
+func main(){
+	t:= time.Now()
+	genesisBlock := Block{}
+	genesisBlock = Block{0, t.String(),calculateHash(genesisBlock),"","000","123",123}
+	Blockchain = append(Blockchain, genesisBlock)
+
+	golog.SetAllLoggers(gologging.INFO)
+
+	listenF := flag.Int("l", 0, "wait for incoming connections")
+	target := flag.String("d", "", "target peer to dial")
+	secio := flag.Bool("secion", false, "enbale secio")
+	seed := flag.Int64("seed", 0, "set random seed for id generation")
+	flag.Parse()
+
+	if *listenF == 0	{
+		log.Fatal("Please provides a port to bind on with -l")
+	}
+
+	ha, err := makeBasicHost(*listenF, *secio, *seed)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if *target == "" {
+		log.Println("listening for connections")
+		ha.SetStreamHandler("/p2p/1.0.0", handleStream)
+		select {}
+	} else {
+		ha.SetStreamHandler("/p2p/1.0.0", handleStream)
+
+
+		ipfsaddr, err := ma.NewMultiaddr(*target)
+		if err != nil {
+			log.Fatalln(err)
+		}
+
+		pid, err := ipfsaddr.ValueForProtocol(ma.P_IPFS)
+		if err != nil {
+			log.Fatalln(err)
+		}
+
+		peerid, err := peer.IDB58Decode(pid)
+		if err!= nil {
+			log.Fatalln(err)
+		}
+
+		targetPeerAddr, _ := ma.NewMultiaddr(
+			fmt.Sprintf("/ipfs/%s", peer.IDB58Encode(peerid)))
+		targetAddr := ipfsaddr.Decapsulate(targetPeerAddr)
+
+		ha.Peerstore().AddAddr(peerid, targetAddr, pstore.PermanentAddrTTL)
+		log.Println("opening stream")
+
+		s, err := ha.NewStream(context.Background(), peerid, "/p2p/1.0.0")
+		if err != nil {
+			log.Fatalln(err)
+		}
+
+		rw:= bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
+
+		go writeData(rw)
+		go readData(rw)
+
+		select {}
+}
+
+
 
 }
