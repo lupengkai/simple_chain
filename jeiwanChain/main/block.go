@@ -23,7 +23,7 @@ type Block struct {
 	b.Hash = hash[:]//hash是[32]byte类型 b.Hash是[]byte类型
 }*/
 
-func NewBlock(data string, prevBlockHash []byte) *Block {
+func NewBlock(data string, prevBlockHash []byte) *Block { //所有new的方法都没有绑定类
 	block := &Block{time.Now().Unix(),[]byte(data), prevBlockHash, []byte{},0}//打包时生成的时间
 	pow := NewProofOfWork(block)//这时候没有nonce
 	nonce, hash:=pow.Run()//找一个满足条件的nonce并返回
