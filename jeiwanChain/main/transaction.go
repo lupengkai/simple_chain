@@ -144,9 +144,9 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transac
 	for inID, vin := range txCopy.Vin {//遍历交易的输入 来自交易Txid的输出Vout
 		prevTx := prevTXs[hex.EncodeToString(vin.Txid)]
 		txCopy.Vin[inID].Signature = nil //TXInput.Signature
-		txCopy.Vin[inID].PubKey = prevTx.Vout[vin.Vout].PubKeyHash
+		txCopy.Vin[inID].PubKey = prevTx.Vout[vin.Vout].PubKeyHash //此次发送方的pubkeyhash
 		txCopy.ID = txCopy.Hash()
-		txCopy.Vin[inID].PubKey = nil
+		txCopy.Vin[inID].PubKey = nil//清空所有交易的签名  被签名的内容包含对所有交易分配方案
 
 		r, s, err := ecdsa.Sign(rand.Reader, &privKey, txCopy.ID)
 		if err != nil {
@@ -154,7 +154,8 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transac
 		}
 		signature := append(r.Bytes(), s.Bytes()...)
 
-		tx.Vin[inID].Signature = signature//分别对每笔交易进行签名 用私钥对 发送方 金额 接收方 的hash签名
+		tx.Vin[inID].Signature = signature//分别对每笔交易进行签名 用私钥对 发送方 金额 接收方 的hash签名 这样的话 此次发送方的签名 对整笔交易的分配方案签名。
+		//只修改了tx 没有修改txcopy
 	}
 }
 

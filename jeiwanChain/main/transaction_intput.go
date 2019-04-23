@@ -3,8 +3,8 @@ package main
 import "bytes"
 
 type TXInput struct {
-	Txid []byte
-	Vout int
+	Txid []byte//source transaction id
+	Vout int// source transaction output index 就是来源交易输出里的第几笔交易
 	Signature []byte
 	PubKey []byte
 }

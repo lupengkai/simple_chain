@@ -13,6 +13,7 @@ type Block struct {
 	PrevBlockHash []byte
 	Hash []byte
 	Nonce int
+	Transactions []*Transaction//存的transaction的内存地址
 }
 
 /*func (b *Block) SetHash() {
