@@ -95,18 +95,7 @@ func (cli *CLI) printChain() {
 }
 
 
-func (cli *CLI) send(from string, to string, amount int) {
-	bc := NewBlockchain(from)
-	UTXOSet :=UTXOSet{bc}
-	defer bc.db.Close()
 
-	tx := NewUTXOTransaction(from, to, amount, &UTXOSet)
-	cbTx := NewCoinbaseTX(from, "")
-	txs := []*Transaction{cbTx, tx}//include coinbase
-
-	newBlock := bc.MineBlock(txs)
-	fmt.Println("Success!")
-}
 
 func main() {
 	bc := NewBlockchain()

@@ -8,12 +8,12 @@ import (
 )
 
 type Block struct {
-	Timestamp int64
-	Data []byte
+	Timestamp     int64
+	Transactions  []*Transaction
 	PrevBlockHash []byte
-	Hash []byte
-	Nonce int
-	Transactions []*Transaction//存的transaction的内存地址
+	Hash          []byte
+	Nonce         int
+	Height        int
 }
 
 /*func (b *Block) SetHash() {
@@ -24,13 +24,17 @@ type Block struct {
 	b.Hash = hash[:]//hash是[32]byte类型 b.Hash是[]byte类型
 }*/
 
-func NewBlock(data string, prevBlockHash []byte) *Block { //所有new的方法都没有绑定类
-	block := &Block{time.Now().Unix(),[]byte(data), prevBlockHash, []byte{},0}//打包时生成的时间
-	pow := NewProofOfWork(block)//这时候没有nonce
-	nonce, hash:=pow.Run()//找一个满足条件的nonce并返回
 
-	block.Hash = hash[:]//填上现在的hash
-	block.Nonce = nonce//填上nonce
+
+// NewBlock creates and returns Block
+func NewBlock(transactions []*Transaction, prevBlockHash []byte, height int) *Block {
+	block := &Block{time.Now().Unix(), transactions, prevBlockHash, []byte{}, 0, height}
+	pow := NewProofOfWork(block)
+	nonce, hash := pow.Run()
+
+	block.Hash = hash[:]
+	block.Nonce = nonce
+
 	return block
 }
 
@@ -57,3 +61,7 @@ func DeserializeBlock(d []byte) *Block {
 }
 
 
+// NewGenesisBlock creates and returns genesis Block
+func NewGenesisBlock(coinbase *Transaction) *Block {
+	return NewBlock([]*Transaction{coinbase}, []byte{}, 0)
+}

@@ -1,22 +1,23 @@
 package main
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
 	"log"
+	"golang.org/x/crypto/ripemd160"
 )
-
+const version = byte(0x00)
+const addressChecksumLen = 4
 type Wallet struct {
 	PrivateKey ecdsa.PrivateKey
 	PublicKey []byte
 }
 
-type Wallets struct {
-	Wallets map[string]*Wallet
-}
+
 
 func NewWallet() *Wallet {//*wallet 才可以修改吧
 	private, public := newKeyPair()
@@ -45,7 +46,7 @@ func HashPubKey(pubKey []byte) []byte { // 先SHA256后RIPEMD160 对公钥hash
 	return publicRIPEMD160
 }
 
-func checksum(payload []byte) []byte {
+func checksum(payload []byte) []byte {//哈希，计算校验和。校验和是结果哈希的前四个字节
 	firstSHA := sha256.Sum256(payload)
 	secondSHA := sha256.Sum256(firstSHA[:])
 
@@ -65,4 +66,14 @@ func (w Wallet) GetAddress() []byte { // 公钥转base58地址
 
 
 	return address
+}
+// ValidateAddress check if address if valid
+func ValidateAddress(address string) bool {
+	pubKeyHash := Base58Decode([]byte(address))
+	actualChecksum := pubKeyHash[len(pubKeyHash)-addressChecksumLen:]
+	version := pubKeyHash[0]
+	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-addressChecksumLen]
+	targetChecksum := checksum(append([]byte{version}, pubKeyHash...))
+
+	return bytes.Compare(actualChecksum, targetChecksum) == 0
 }

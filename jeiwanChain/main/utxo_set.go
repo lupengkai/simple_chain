@@ -1,5 +1,5 @@
 package main
-//等于Account
+//等于Account 保存chain state 的对象
 import(
 	"encoding/hex"
 	"github.com/boltdb/bolt"
@@ -9,7 +9,7 @@ import(
 const utxoBucket = "chainstate"
 //chainstate 存储未花费交易输出的集合  数据库表示的未花费交易输出的块哈希     交易哈希-》块哈希-》块
 
-type UTXOSet struct { //UTXO 跟 Blockchain一起 但存储在不同的 bucket 中
+type UTXOSet struct { //UTXO(chainstate) 跟 blocks一起 但存储在不同的 bucket 中
 	Blockchain *Blockchain
 }
 

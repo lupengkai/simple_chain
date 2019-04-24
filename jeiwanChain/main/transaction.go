@@ -3,11 +3,13 @@ package main
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/gob"
 	"encoding/hex"
 	"fmt"
+	"math/big"
 	"strings"
 
 	"log"
@@ -57,43 +59,6 @@ func (tx *Transaction) Hash() []byte {
 }
 
 
-
-
-
-
-
-
-func NewUTXOTransaction(from string, to string, amount int, bc *Blockchain) *Transaction {
-	var inputs []TXInput
-	var outputs []TXOutput
-
-	acc, validOutputs := bc.FindSpendableOutputs(from, amount) //寻找没有花费的输出
-
-	if acc < amount { //acc 是 之前utxo之和
-		log.Panic("ERROR: Not enough funds")
-	}
-
-	for txid, outs := range validOutputs{//遍历utxo
-		txID, err :=hex.DecodeString(txid)
-		if err != nil {
-			log.Panic(err)
-		}
-
-		for _, out := range outs {//组装交易
-			input := TXInput{txID, out, from}
-			inputs = append(inputs, input)
-		}
-	}
-	outputs = append(outputs, TXOutput{amount, to})//付钱
-	if acc >amount {
-		outputs = append(outputs, TXOutput{acc-amount,from}) //找零
-	}
-
-	tx := Transaction{nil, inputs, outputs}
-	tx.SetID()
-	return &tx
-}
-
 // NewUTXOTransaction creates a new transaction
 func NewUTXOTransaction(wallet *Wallet, to string, amount int, UTXOSet *UTXOSet) *Transaction {
 	var inputs []TXInput
@@ -134,7 +99,7 @@ func NewUTXOTransaction(wallet *Wallet, to string, amount int, UTXOSet *UTXOSet)
 }
 
 
-func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transaction) {// 对 发送方、接收方、值 签名
+func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transaction) {// 拿到私钥和输入的来源事务  对 发送方、接收方、值 签名
 	if tx.IsCoinbase() {
 		return
 	}
@@ -232,4 +197,47 @@ func (tx Transaction) String() string {
 	}
 
 	return strings.Join(lines, "\n")
+}
+// Verify verifies signatures of Transaction inputs
+func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
+	if tx.IsCoinbase() {
+		return true
+	}
+
+	for _, vin := range tx.Vin {
+		if prevTXs[hex.EncodeToString(vin.Txid)].ID == nil {
+			log.Panic("ERROR: Previous transaction is not correct")
+		}
+	}
+
+	txCopy := tx.TrimmedCopy()
+	curve := elliptic.P256()
+
+	for inID, vin := range tx.Vin {
+		prevTx := prevTXs[hex.EncodeToString(vin.Txid)]
+		txCopy.Vin[inID].Signature = nil
+		txCopy.Vin[inID].PubKey = prevTx.Vout[vin.Vout].PubKeyHash
+
+		r := big.Int{}
+		s := big.Int{}
+		sigLen := len(vin.Signature)
+		r.SetBytes(vin.Signature[:(sigLen / 2)])
+		s.SetBytes(vin.Signature[(sigLen / 2):])
+
+		x := big.Int{}
+		y := big.Int{}
+		keyLen := len(vin.PubKey)
+		x.SetBytes(vin.PubKey[:(keyLen / 2)])
+		y.SetBytes(vin.PubKey[(keyLen / 2):])
+
+		dataToVerify := fmt.Sprintf("%x\n", txCopy)
+
+		rawPubKey := ecdsa.PublicKey{Curve: curve, X: &x, Y: &y}
+		if ecdsa.Verify(&rawPubKey, []byte(dataToVerify), &r, &s) == false {
+			return false
+		}
+		txCopy.Vin[inID].PubKey = nil
+	}
+
+	return true
 }
