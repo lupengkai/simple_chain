@@ -37,7 +37,18 @@ func NewBlock(transactions []*Transaction, prevBlockHash []byte, height int) *Bl
 
 	return block
 }
+// HashTransactions returns a hash of the transactions in the block
+//todo 替换block里的transactions 为merkel tree root hash
+func (b *Block) HashTransactions() []byte {
+	var transactions [][]byte
 
+	for _, tx := range b.Transactions {
+		transactions = append(transactions, tx.Serialize())
+	}
+	mTree := NewMerkleTree(transactions)
+
+	return mTree.RootNode.Data
+}
 func (b *Block) Serialize() []byte { //序列化
 	var result bytes.Buffer
 	encoder := gob.NewEncoder(&result)
