@@ -22,37 +22,39 @@ type Blockchain struct {
 	db *bolt.DB //变量名小写表示private
 }
 
-func (bc *Blockchain) AddBlock(data string) {
-	var lastHash []byte
-
-	err := bc.db.View(func(tx *bolt.Tx) error {
+// AddBlock saves the block into the blockchain
+func (bc *Blockchain) AddBlock(block *Block) {
+	err := bc.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
-		lastHash = b.Get([]byte("l"))
-		return nil
-	})
-	if err != nil {
-		log.Panic(err)
-	}
+		blockInDb := b.Get(block.Hash)
 
-	newBlock := NewBlock(data, lastHash)
+		if blockInDb != nil {
+			return nil
+		}
 
-	err = bc.db.Update(func(tx *bolt.Tx) error {
-		b :=tx.Bucket([]byte(blocksBucket)) //找到表
-		err := b.Put(newBlock.Hash, newBlock.Serialize())//放入
+		blockData := block.Serialize()
+		err := b.Put(block.Hash, blockData)
 		if err != nil {
 			log.Panic(err)
 		}
-		err = b.Put([]byte("l"), newBlock.Hash)//修改l指向最新块的hash
-		bc.tip = newBlock.Hash
+
+		lastHash := b.Get([]byte("l"))
+		lastBlockData := b.Get(lastHash)
+		lastBlock := DeserializeBlock(lastBlockData)
+
+		if block.Height > lastBlock.Height {
+			err = b.Put([]byte("l"), block.Hash)
+			if err != nil {
+				log.Panic(err)
+			}
+			bc.tip = block.Hash
+		}
 
 		return nil
 	})
 	if err != nil {
 		log.Panic(err)
 	}
-
-
-
 }
 
 
@@ -351,3 +353,63 @@ func (bc *Blockchain) FindUTXO() map[string]TXOutputs {//找到所有未花费�
 		fmt.Println("PoW: %s \n", strconv.FormatBool(pow.Validate())) //%t 是bool类型的占位符
 	}
 }*/
+// GetBestHeight returns the height of the latest block
+func (bc *Blockchain) GetBestHeight() int {
+	var lastBlock Block
+
+	err := bc.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(blocksBucket))
+		lastHash := b.Get([]byte("l"))
+		blockData := b.Get(lastHash)
+		lastBlock = *DeserializeBlock(blockData)
+
+		return nil
+	})
+	if err != nil {
+		log.Panic(err)
+	}
+
+	return lastBlock.Height
+}
+
+// GetBlockHashes returns a list of hashes of all the blocks in the chain
+func (bc *Blockchain) GetBlockHashes() [][]byte {//返回本地的区块链所有区块的hash
+	var blocks [][]byte
+	bci := bc.Iterator()
+
+	for {
+		block := bci.Next()
+
+		blocks = append(blocks, block.Hash)//[4,3,2,1] 最新的在最前面
+
+		if len(block.PrevBlockHash) == 0 {
+			break
+		}
+	}
+
+	return blocks
+}
+
+// GetBlock finds a block by its hash and returns it
+func (bc *Blockchain) GetBlock(blockHash []byte) (Block, error) {
+	var block Block
+
+	err := bc.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(blocksBucket))
+
+		blockData := b.Get(blockHash)
+
+		if blockData == nil {
+			return errors.New("Block is not found.")
+		}
+
+		block = *DeserializeBlock(blockData)
+
+		return nil
+	})
+	if err != nil {
+		return block, err
+	}
+
+	return block, nil
+}

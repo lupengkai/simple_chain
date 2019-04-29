@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 )
-
+//todo 交易的脚本语言
 type Block struct {
 	Timestamp     int64
 	Transactions  []*Transaction
@@ -38,7 +38,7 @@ func NewBlock(transactions []*Transaction, prevBlockHash []byte, height int) *Bl
 	return block
 }
 // HashTransactions returns a hash of the transactions in the block
-//todo 替换block里的transactions 为merkel tree root hash
+//todo 替换block里的transactions 为merkle tree root hash
 func (b *Block) HashTransactions() []byte {
 	var transactions [][]byte
 
