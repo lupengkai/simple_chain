@@ -13,7 +13,7 @@ var (
 	maxNonce = math.MaxInt64
 )
 
-const targetBits = 24 // 计算难度
+const targetBits = 16 // 计算难度
 
 type ProofOfWork struct {
 	block *Block
@@ -37,7 +37,7 @@ func (pow *ProofOfWork) prepareData(nonce int) []byte {//私有方法
 	data :=bytes.Join(//前一个区块的hash，区块包含的数据，时间戳，难度，nonce值
 		[][]byte{
 			pow.block.PrevBlockHash,
-			pow.block.Data,
+			pow.block.HashTransactions(),
 			IntToHex(pow.block.Timestamp),
 			IntToHex(int64(targetBits)),
 			IntToHex(int64(nonce)),
@@ -52,10 +52,13 @@ func (pow *ProofOfWork) Run() (int, []byte) {//公开方法
 	var hash [32]byte
 	nonce := 0 //nonce初始化
 
-	fmt.Printf("mining the block containing \"%s\"\n", pow.block.Data)
+	fmt.Printf("Mining a new block")
 	for nonce < maxNonce {
 		data := pow.prepareData(nonce)
 		hash = sha256.Sum256(data)//16进制表示
+		if math.Remainder(float64(nonce), 100000) == 0 {
+			fmt.Printf("\r%x", hash)
+		}
 		hashInt.SetBytes(hash[:])
 
 		if hashInt.Cmp(pow.target) == -1 {

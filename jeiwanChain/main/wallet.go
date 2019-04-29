@@ -2,12 +2,12 @@ package main
 
 import (
 	"bytes"
-	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
 	"log"
+
 	"golang.org/x/crypto/ripemd160"
 )
 const version = byte(0x00)
@@ -39,8 +39,11 @@ func newKeyPair() (ecdsa.PrivateKey, []byte) {//生成公钥、私钥对
 func HashPubKey(pubKey []byte) []byte { // 先SHA256后RIPEMD160 对公钥hash
 	publicSHA256 := sha256.Sum256(pubKey)
 
-	RIPEMD160Hasher := crypto.RIPEMD160.New()
+	RIPEMD160Hasher := ripemd160.New()
 	_, err := RIPEMD160Hasher.Write(publicSHA256[:])
+	if err != nil {
+		log.Panic(err)
+	}
 	publicRIPEMD160 := RIPEMD160Hasher.Sum(nil)
 
 	return publicRIPEMD160
