@@ -330,6 +330,7 @@ func handleGetData(request []byte, bc *Blockchain) {
 		txID := hex.EncodeToString(payload.ID)
 		tx := mempool[txID]
 
+		fmt.Println("send tx to ",payload.AddrFrom)
 		sendTx(payload.AddrFrom, &tx)
 		// delete(mempool, txID)
 	}

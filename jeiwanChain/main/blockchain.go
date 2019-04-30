@@ -171,7 +171,7 @@ func dbExists(dbFile string) bool {
 	return true
 }
 
-func (bc *Blockchain) FindSpendableOutputs(address string, amount int) (int,map[string][]int) {
+/*func (bc *Blockchain) FindSpendableOutputs(address string, amount int) (int,map[string][]int) {
 	unspentOutputs := make(map[string][]int)
 	unspentTXs := bc.FindUnspentTransactions(address)//特定账户的unspent txs
 	accumulated :=0
@@ -197,11 +197,11 @@ func (bc *Blockchain) FindSpendableOutputs(address string, amount int) (int,map[
 	
 	
 
-}
+}*/
 
-func (bc *Blockchain) FindUnspentTransactions(s string) []Transaction {//找到含特定地址为输出的未花费交易
-	
-}
+/*func (bc *Blockchain) FindUnspentTransactions(s string) []Transaction {//找到含特定地址为输出的未花费交易
+
+}*/
 
 
 // MineBlock mines a new block with the provided transactions
@@ -212,6 +212,7 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction) *Block {
 	for _, tx := range transactions {
 		// TODO: ignore transaction if it's not valid
 		if bc.VerifyTransaction(tx) != true { //现在是如果块里面有一个非法的就放弃整个块里的交易
+			fmt.Println(tx)
 			log.Panic("ERROR: Invalid transaction")
 		}
 	}

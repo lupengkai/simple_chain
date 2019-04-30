@@ -23,9 +23,9 @@ type Transaction struct {
 	Vout []TXOutput
 }
 
-func (tx *Transaction) SetID() { //指针就收对象可以修改值 非指针不能修改
+/*func (tx *Transaction) SetID() { //指针就收对象可以修改值 非指针不能修改
 
-}
+}*/
 
 
 // IsCoinbase checks whether the transaction is coinbase
@@ -104,23 +104,35 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transac
 		return
 	}
 
+	for _, vin := range tx.Vin {
+		if prevTXs[hex.EncodeToString(vin.Txid)].ID == nil {
+			log.Panic("ERROR: Previous transaction is not correct")
+		}
+	}
+
+
 	txCopy := tx.TrimmedCopy()//不是对完整交易签名，需要修剪  比特币允许交易包含引用了不同地址的输入
 
 	for inID, vin := range txCopy.Vin {//遍历交易的输入 来自交易Txid的输出Vout
 		prevTx := prevTXs[hex.EncodeToString(vin.Txid)]
 		txCopy.Vin[inID].Signature = nil //TXInput.Signature
 		txCopy.Vin[inID].PubKey = prevTx.Vout[vin.Vout].PubKeyHash //此次发送方的pubkeyhash
-		txCopy.ID = txCopy.Hash()
-		txCopy.Vin[inID].PubKey = nil//清空所有交易的签名  被签名的内容包含对所有交易分配方案
 
-		r, s, err := ecdsa.Sign(rand.Reader, &privKey, txCopy.ID)
+		dataToSign := fmt.Sprintf("%x\n", txCopy)
+		r, s, err := ecdsa.Sign(rand.Reader, &privKey, []byte(dataToSign))
 		if err != nil {
 			log.Panic(err)
 		}
 		signature := append(r.Bytes(), s.Bytes()...)
 
-		tx.Vin[inID].Signature = signature//分别对每笔交易进行签名 用私钥对 发送方 金额 接收方 的hash签名 这样的话 此次发送方的签名 对整笔交易的分配方案签名。
+		tx.Vin[inID].Signature = signature
+		//分别对每笔交易进行签名 用私钥对 发送方 金额 接收方 的hash签名 这样的话 此次发送方的签名 对整笔交易的分配方案签名。
 		//只修改了tx 没有修改txcopy
+		txCopy.Vin[inID].PubKey = nil//清空所有交易的签名  被签名的内容包含对所有交易分配方案
+
+
+
+
 	}
 }
 
@@ -232,8 +244,14 @@ func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
 
 		dataToVerify := fmt.Sprintf("%x\n", txCopy)
 
+
+
 		rawPubKey := ecdsa.PublicKey{Curve: curve, X: &x, Y: &y}
+		fmt.Println(" txCopy:",txCopy)
+		fmt.Println("rawPubKey", rawPubKey)
+
 		if ecdsa.Verify(&rawPubKey, []byte(dataToVerify), &r, &s) == false {
+			fmt.Println("escda verify false")
 			return false
 		}
 		txCopy.Vin[inID].PubKey = nil

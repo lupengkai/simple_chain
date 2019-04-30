@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv"
+
 )
 
 type CLI struct {
@@ -136,6 +136,7 @@ func (cli *CLI) Run() {
 			createBlockchainCmd.Usage()
 			os.Exit(1)
 		}
+		fmt.Println(*createBlockchainAddress,nodeID)
 		cli.createBlockchain(*createBlockchainAddress, nodeID)
 	}
 

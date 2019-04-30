@@ -39,9 +39,9 @@ func NewTXOutput(value int, address string) *TXOutput {
 
 
 
-func (output TXOutput) CanBeUnlockedWith(s string) bool {
+/*func (output TXOutput) CanBeUnlockedWith(s string) bool {
 
-}
+}*/
 
 // Serialize serializes TXOutputs
 func (outs TXOutputs) Serialize() []byte {
